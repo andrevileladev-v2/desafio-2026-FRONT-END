@@ -1,0 +1,24 @@
+{
+  "name": "desafio-2026-front-end",
+  "version": "1.0.0",
+  "description": "- Desenvolver uma interface web para visualização e gerenciamento de dados de espécies consumindo uma API. - **Período para execução:** 27 de abril até 7 de maio",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrevileladev-v2/desafio-2026-FRONT-END.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/andrevileladev-v2/desafio-2026-FRONT-END/issues"
+  },
+  "homepage": "https://github.com/andrevileladev-v2/desafio-2026-FRONT-END#readme",
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
