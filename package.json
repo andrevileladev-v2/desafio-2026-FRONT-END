@@ -2,9 +2,10 @@
   "name": "desafio-2026-front-end",
   "version": "1.0.0",
   "description": "- Desenvolver uma interface web para visualização e gerenciamento de dados de espécies consumindo uma API. - **Período para execução:** 27 de abril até 7 de maio",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:electron": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\" \"wait-on http://localhost:5173 && npm run dev --prefix app\"",
+    "build": "npm run build --prefix frontend && npm run build --prefix backend"
   },
   "repository": {
     "type": "git",
@@ -19,6 +20,7 @@
   },
   "homepage": "https://github.com/andrevileladev-v2/desafio-2026-FRONT-END#readme",
   "dependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "wait-on": "^9.0.5"
   }
 }
