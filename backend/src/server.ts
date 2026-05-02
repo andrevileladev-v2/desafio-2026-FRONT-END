@@ -8,6 +8,7 @@ import { speciesRouter } from './routes/species'
 import { observationsRouter } from './routes/observations'
 import { analyticsRouter } from './routes/analytics'
 import { mlRouter } from './routes/ml'
+import { exportRouter } from './routes/export'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -23,6 +24,7 @@ app.use('/api/species', speciesRouter(speciesRepo, obsRepo))
 app.use('/api/observations', observationsRouter(obsRepo))
 app.use('/api', analyticsRouter(statsService))
 app.use('/api', mlRouter(obsRepo))
+app.use('/api', exportRouter(speciesRepo, obsRepo, statsService))
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

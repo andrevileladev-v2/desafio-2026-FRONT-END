@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { speciesApi } from '../../shared/api/species'
+import { api } from '../../shared/api/client'
 import type { Species, SpeciesCategory, ConservationStatus } from '../../shared/types'
 import { StatusBadge } from '../../shared/components/StatusBadge'
+
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 const CATEGORIES: SpeciesCategory[] = ['Mammal', 'Bird', 'Reptile', 'Amphibian', 'Fish', 'Invertebrate']
 const STATUSES: ConservationStatus[] = [
@@ -37,6 +40,9 @@ export function SpeciesPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [selected, setSelected] = useState<Species | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<{ imported: number; errors: number } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = () => {
     setLoading(true)
@@ -44,6 +50,27 @@ export function SpeciesPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadResult(null)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await api.post<{ imported: number; errors: number }>('/api/upload/observations', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setUploadResult(res.data)
+      load()
+    } catch {
+      setUploadResult({ imported: 0, errors: 1 })
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const filtered = list.filter((s) => {
     const q = search.toLowerCase()
@@ -80,10 +107,22 @@ export function SpeciesPage() {
           <h1>Espécies</h1>
           <p className="page-subtitle">{list.length} espécies cadastradas</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          + Adicionar Espécie
-        </button>
+        <div className="export-group">
+          <a className="btn-export" href={`${API}/api/export/species.csv`} download>CSV</a>
+          <a className="btn-export" href={`${API}/api/export/species.json`} download>JSON</a>
+          <label className={`btn-export ${uploading ? 'disabled' : ''}`} title="Importar observações CSV">
+            {uploading ? 'Importando...' : 'Upload CSV'}
+            <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
+          </label>
+          <button className="btn-primary" onClick={() => setShowForm(true)}>+ Espécie</button>
+        </div>
       </div>
+      {uploadResult && (
+        <div className={`upload-result ${uploadResult.errors > 0 ? 'has-errors' : ''}`}>
+          {uploadResult.imported} observações importadas{uploadResult.errors > 0 ? ` · ${uploadResult.errors} erros` : ''}
+          <button onClick={() => setUploadResult(null)}>✕</button>
+        </div>
+      )}
 
       <div className="filters-bar">
         <input

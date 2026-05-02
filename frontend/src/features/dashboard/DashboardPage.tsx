@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend,
+  ScatterChart, Scatter, ZAxis, LabelList,
 } from 'recharts'
 import { analyticsApi } from '../../shared/api/analytics'
+import { useFilters } from '../../shared/context/FilterContext'
 import type { Stats, TimeSeriesPoint } from '../../shared/types'
+
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 const BIOME_COLORS: Record<string, string> = {
   Amazônia: '#06b6d4',
@@ -26,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PIE_COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#64748b']
 
 export function DashboardPage() {
+  const { selectedBiome, selectedYear, setSelectedBiome } = useFilters()
   const [stats, setStats] = useState<Stats | null>(null)
   const [timeSeries, setTimeSeries] = useState<TimeSeriesPoint[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,10 +39,13 @@ export function DashboardPage() {
     Promise.all([analyticsApi.getStats(), analyticsApi.getTimeSeries()])
       .then(([s, ts]) => {
         setStats(s)
-        setTimeSeries(ts)
+        const filtered = selectedYear
+          ? ts.filter((p) => p.date.startsWith(String(selectedYear)))
+          : ts
+        setTimeSeries(filtered)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [selectedYear])
 
   if (loading) {
     return (
@@ -50,12 +58,32 @@ export function DashboardPage() {
 
   if (!stats) return null
 
+  const filteredBiomeData = selectedBiome
+    ? stats.byBiome.filter((b) => b.biome === selectedBiome)
+    : stats.byBiome
+
   return (
     <div className="dashboard">
       <div className="page-header">
-        <h1>Dashboard</h1>
-        <p className="page-subtitle">Análise ambiental de espécies — dados em tempo real</p>
+        <div>
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">Análise ambiental de espécies — dados em tempo real</p>
+        </div>
+        <div className="export-group">
+          <a className="btn-export" href={`${API}/api/export/stats.json`} download>
+            Exportar Stats JSON
+          </a>
+          <a className="btn-export" href={`${API}/api/export/observations.csv`} download>
+            Exportar Obs. CSV
+          </a>
+        </div>
       </div>
+      {selectedBiome && (
+        <div className="filter-active-bar">
+          Filtrando por bioma: <strong>{selectedBiome}</strong>
+          <button onClick={() => setSelectedBiome('')}>✕ Limpar</button>
+        </div>
+      )}
 
       <div className="kpi-grid">
         <div className="kpi-card">
@@ -147,9 +175,12 @@ export function DashboardPage() {
         </div>
 
         <div className="chart-card">
-          <h3>Observações por Bioma</h3>
+          <h3>Observações por Bioma <span style={{fontSize:10,color:'#64748b'}}>(clique para filtrar)</span></h3>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={stats.byBiome} layout="vertical">
+            <BarChart data={filteredBiomeData} layout="vertical"
+              onClick={(e) => { if (e?.activeLabel) setSelectedBiome(e.activeLabel as string) }}
+              style={{ cursor: 'pointer' }}
+            >
               <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} />
               <YAxis dataKey="biome" type="category" tick={{ fontSize: 10, fill: '#94a3b8' }} width={100} />
               <Tooltip
@@ -180,6 +211,45 @@ export function DashboardPage() {
               />
               <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Espécies" />
             </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="chart-card chart-wide">
+          <h3>Correlação: Espécies × Observações por Bioma</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+              <XAxis
+                dataKey="speciesCount"
+                name="Espécies"
+                type="number"
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                label={{ value: 'Nº de Espécies', position: 'insideBottom', offset: -4, fill: '#64748b', fontSize: 10 }}
+              />
+              <YAxis
+                dataKey="obsCount"
+                name="Observações"
+                type="number"
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
+                label={{ value: 'Observações', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+              />
+              <ZAxis range={[80, 80]} />
+              <Tooltip
+                cursor={{ strokeDasharray: '3 3' }}
+                contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8 }}
+                itemStyle={{ color: '#e2e8f0' }}
+                formatter={(value, name) => [value, name]}
+                labelFormatter={() => ''}
+              />
+              <Scatter
+                data={stats.biomeCorrelation}
+                fill="#06b6d4"
+              >
+                {stats.biomeCorrelation.map((entry) => (
+                  <Cell key={entry.biome} fill={BIOME_COLORS[entry.biome] ?? '#06b6d4'} />
+                ))}
+                <LabelList dataKey="biome" position="top" style={{ fontSize: 9, fill: '#94a3b8' }} />
+              </Scatter>
+            </ScatterChart>
           </ResponsiveContainer>
         </div>
 

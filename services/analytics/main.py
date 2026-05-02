@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.analytics import router
+from app.routes.etl import router as etl_router
 
 app = FastAPI(
     title="EcoAnalysis — Python Analytics Service",
@@ -17,6 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(etl_router)
 
 
 @app.get("/health")

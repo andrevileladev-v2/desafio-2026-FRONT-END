@@ -45,6 +45,7 @@ export interface Stats {
   topSpecies: { species: string; count: number }[]
   byRegion: { region: string; count: number }[]
   byBiome: { biome: string; count: number }[]
+  biomeCorrelation: { biome: string; speciesCount: number; obsCount: number }[]
 }
 
 export interface HeatmapPoint {

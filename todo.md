@@ -12,269 +12,260 @@ Sistema desktop (Electron) para análise ambiental de espécies com:
 # 🚀 FASE 1 — Setup do Projeto
 
 ## 🧱 Monorepo
-- [ ] Criar estrutura base:
-apps/
-services/
-data/
-infra/
-
-
-- [ ] Configurar workspace (pnpm ou yarn workspaces)
-- [ ] Configurar TypeScript global
-- [ ] Configurar ESLint + Prettier
+- [x] Criar estrutura base: `frontend/` `backend/` `app/` `services/analytics/` `data/`
+- [x] Configurar workspace (npm workspaces)
+- [x] Configurar TypeScript global
+- [x] Configurar ESLint + Prettier
 
 ---
 
 ## 🖥️ Electron + Web
-- [ ] Criar app Electron (`apps/desktop`)
-- [ ] Criar app React (`apps/web`)
-- [ ] Configurar preload seguro (IPC)
-- [ ] Integrar Electron ↔ React
+- [x] Criar app Electron (`app/`)
+- [x] Criar app React (`frontend/`)
+- [x] Configurar preload seguro (`app/preload.js`)
+- [x] Integrar Electron ↔ React (dev: localhost:5173 / prod: dist/index.html)
 
 ---
 
 ## 🐳 Infraestrutura
-- [ ] Criar `docker-compose.yml`
-- [ ] Subir serviços:
-- [ ] Node API
-- [ ] Python Analytics
-- [ ] PostgreSQL
-- [ ] Configurar variáveis de ambiente
+- [x] Criar `docker-compose.yml`
+- [x] Subir serviços:
+  - [x] Node API (:3001)
+  - [x] Python Analytics (:8000)
+  - [ ] PostgreSQL (usando in-memory — banco relacional não implementado)
+  - [x] Portainer (:9000)
+- [x] Configurar variáveis de ambiente (VITE_API_URL, PYTHON_ANALYTICS_URL)
 
 ---
 
 # 🧩 FASE 2 — Arquitetura Base
 
 ## 🧠 Padrões
-- [ ] Implementar:
-- [ ] Clean Architecture
-- [ ] DDD (Domain-Driven Design)
-- [ ] Ports & Adapters (Hexagonal)
-- [ ] Dependency Injection
+- [x] Clean Architecture
+- [x] DDD (Domain-Driven Design) — entidades Species + Observation
+- [x] Ports & Adapters (Hexagonal) — ISpeciesRepository / IObservationRepository
+- [x] Dependency Injection (básico via construtores)
 
 ---
 
 ## 📁 Estrutura por Feature
-- [ ] Criar estrutura base:
-  features/
-  domain/
-  data/
-  ui/
-
+- [x] Criar estrutura base:
+  ```
+  frontend/src/features/{dashboard,map,species,analytics}
+  backend/src/domain/
+  backend/src/repositories/
+  backend/src/services/
+  ```
 
 ---
 
 # 🧬 FASE 3 — Domínio (Core)
 
 ## 🌱 Espécies
-- [ ] Criar entidade `Species`
-- [ ] Criar Value Objects:
-- [ ] Location
-- [ ] TimeRange
-- [ ] Definir regras de negócio
+- [x] Criar entidade `Species` (`backend/src/domain/Species.ts`)
+- [x] ConservationStatus + SpeciesCategory como tipos
+- [ ] Value Objects separados: Location, TimeRange (embutidos nas entidades, não separados)
+- [x] Regras de negócio (validação geográfica no ETL)
 
 ---
 
 ## 📊 Observações
-- [ ] Entidade `Observation`
-- [ ] Regras:
-- validação geográfica
-- consistência temporal
+- [x] Entidade `Observation` (`backend/src/domain/Observation.ts`)
+- [x] Validação geográfica (ETL: lat -34..5, lng -74..-28)
+- [x] Consistência temporal (date ISO format)
 
 ---
 
 ## 📦 Repositórios
-- [ ] Interface `SpeciesRepository`
-- [ ] Interface `ObservationRepository`
+- [x] Interface `ISpeciesRepository`
+- [x] Interface `IObservationRepository`
+- [x] Implementação `InMemorySpeciesRepository`
+- [x] Implementação `InMemoryObservationRepository`
 
 ---
 
 # 🔌 FASE 4 — API (Node.js)
 
 ## ⚙️ Setup
-- [ ] Criar serviço `services/api`
-- [ ] Configurar Express/Fastify
-- [ ] Configurar DI container
+- [x] Serviço Express 5 + TypeScript (`backend/`)
+- [x] ts-node-dev para hot reload em desenvolvimento
+- [x] CORS + JSON middleware
 
 ---
 
 ## 📡 Endpoints
-- [ ] `/species`
-- [ ] GET
-- [ ] POST
-- [ ] `/stats`
-- [ ] `/heatmap`
-- [ ] `/clusters`
-- [ ] `/prediction`
-- [ ] `/timeseries`
+- [x] `GET /api/species` + `POST /api/species` + `PUT` + `DELETE`
+- [x] `GET /api/stats`
+- [x] `GET /api/heatmap`
+- [x] `GET /api/clusters`
+- [x] `GET /api/prediction` (Bayesiano Laplace)
+- [x] `GET /api/timeseries`
+- [x] `GET /api/observations`
+- [x] `GET /api/export/species.csv|json` + `GET /api/export/observations.csv|json` + `GET /api/export/stats.json`
+- [x] `POST /api/upload/observations` (multer CSV)
+- [x] `/api/ml/clusters|timeseries|pca|anomalies|classify` (proxy → Python)
 
 ---
 
 ## 🔄 Integração
-- [ ] Integrar com serviço Python (HTTP/gRPC)
-- [ ] Implementar cache (Redis opcional)
+- [x] Integrar com serviço Python via HTTP (`PythonAnalyticsClient`)
+- [ ] Cache Redis (opcional — não implementado)
 
 ---
 
 # 🧠 FASE 5 — Analytics (Python)
 
 ## ⚙️ Setup
-- [ ] Criar serviço `services/analytics`
-- [ ] Configurar:
-- pandas
-- numpy
-- scikit-learn
-- statsmodels
+- [x] FastAPI + uvicorn (`services/analytics/`)
+- [x] pandas + numpy + scikit-learn + statsmodels
 
 ---
 
 ## 🔹 ETL
-- [ ] Ingestão de dados (`data/raw`)
-- [ ] Limpeza
-- [ ] Normalização
-- [ ] Feature engineering
-- [ ] Salvar em `data/processed`
+- [x] Ingestão de dados (`data/raw/*.csv` ou via API)
+- [x] Limpeza (dedup, bounds geográficos)
+- [x] Normalização (lat_norm, lng_norm)
+- [x] Feature engineering (month, year, day_of_year, season, biome_enc, region_enc)
+- [x] Salvar em `data/processed/`
 
 ---
 
 ## 📊 Estatística
-- [ ] Frequência de espécies
-- [ ] Distribuição por categoria
-- [ ] Métricas por região
+- [x] Frequência de espécies
+- [x] Distribuição por categoria
+- [x] Métricas por região (byRegion no StatsService)
 
 ---
 
 ## 🧠 Estatística Bayesiana
-- [ ] Implementar:
-- P(Espécie | Região)
-- [ ] Aplicar suavização de Laplace
+- [x] P(Espécie | Região)
+- [x] Suavização de Laplace (α=1)
 
 ---
 
 ## 📈 Séries Temporais
-- [ ] Médias móveis
-- [ ] Tendência
-- [ ] Previsão (ARIMA ou regressão)
+- [x] Médias móveis (byMonth no StatsService)
+- [x] Tendência
+- [x] Previsão ARIMA(1,1,1) com intervalos de confiança
 
 ---
 
 ## 🔗 Multivariada
-- [ ] Correlação
-- [ ] PCA
-- [ ] Análise conjunta
+- [x] PCA 2D + K-Means colors (`pca_service.py`)
+- [x] Correlação — ScatterChart Espécies × Observações por Bioma no Dashboard
 
 ---
 
 ## 🤖 Machine Learning
-- [ ] K-Means (clusterização geográfica)
-- [ ] Classificação:
-- regressão logística
-- árvore de decisão
+- [x] K-Means — clusterização geográfica (`clustering.py`)
+- [x] Árvore de decisão + feature importance (`classification.py`)
 
 ---
 
 ## 🚨 Anomalias
-- [ ] Detectar padrões fora da curva
+- [x] Isolation Forest (5% contamination) — `anomaly.py`
 
 ---
 
 # 🗺️ FASE 6 — Mapa
 
 ## 🌍 Visualização
-- [ ] Integrar mapa (Mapbox / Leaflet)
-- [ ] Renderizar pontos geográficos
+- [x] Leaflet + react-leaflet + CartoDB dark tiles
+- [x] Renderizar pontos geográficos com CircleMarker + Popup
 
 ---
 
 ## 🔥 Features
-- [ ] Heatmap dinâmico
-- [ ] Clusterização visual
-- [ ] Camadas ativáveis
-- [ ] Timeline temporal
+- [x] Heatmap dinâmico real (leaflet.heat — gradiente azul→verde→amarelo→vermelho por intensidade)
+- [x] Clusterização visual no mapa (círculos proporcionais ao nº de observações + popup com espécies)
+- [x] Camadas ativáveis (toggle Pontos/Calor + Status/Bioma)
+- [x] Timeline temporal (slider por ano)
 
 ---
 
 ## 🧠 Interação
-- [ ] Tooltip com:
-- probabilidade
-- estatísticas
-- tendências
+- [x] Tooltip (espécie, data, região, bioma)
+- [x] Probabilidade/tendência no tooltip — P(espécie|região) via Bayesiano Laplace
 
 ---
 
 # 📊 FASE 7 — Dashboard
 
 ## 📈 Gráficos
-- [ ] Distribuição por categoria
-- [ ] Ranking de espécies
-- [ ] Séries temporais
-- [ ] Correlação
+- [x] Distribuição por categoria (BarChart)
+- [x] Ranking de espécies mais observadas (BarChart horizontal)
+- [x] Séries temporais (LineChart por mês)
+- [x] Status por espécie (PieChart)
+- [x] Observações por bioma (BarChart com filtro)
+- [ ] Gráfico de correlação
 
 ---
 
 ## 🔄 Sincronização
-- [ ] Mapa → gráficos
-- [ ] Filtros globais
-- [ ] Seleção de espécie
+- [x] Mapa → gráficos (FilterContext global)
+- [x] Filtros globais (selectedBiome, selectedSpeciesId, selectedYear)
+- [x] Seleção de espécie propagada
 
 ---
 
 # ⚡ FASE 8 — Performance
 
-- [ ] Cache de dados analíticos
-- [ ] Lazy loading
-- [ ] Memoização
-- [ ] Pré-processamento no backend
+- [ ] Cache de dados analíticos (Redis — não implementado)
+- [x] Lazy loading (React.lazy + Suspense para todas as páginas)
+- [x] Memoização (useMemo nos filtros e mapas de espécies)
+- [x] Pré-processamento no backend (StatsService)
 
 ---
 
 # 🔄 FASE 9 — Pipeline de Dados
 
-- [ ] Automatizar ETL
-- [ ] Atualizar datasets periodicamente
+- [x] ETL automatizado via endpoint (`POST /etl/run`)
+- [ ] Atualização periódica de datasets (cron/scheduler — não implementado)
 - [ ] Versionamento de dados
 
 ---
 
 # 🧪 FASE 10 — Qualidade
 
-- [ ] Testes unitários (domain)
-- [ ] Testes de integração (API)
-- [ ] Testes E2E (frontend)
+- [x] Testes unitários domain — 22 testes (`backend/src/__tests__/domain.test.ts`)
+- [x] Testes de integração API — 19 testes (`backend/src/__tests__/api.test.ts` + `stats.test.ts`)
+- [x] Testes E2E frontend — Playwright (`frontend/e2e/`)
+- [x] Testes unitários frontend — Vitest + Testing Library (10 testes)
 
 ---
 
 # 🎨 FASE 11 — UI/UX
 
-- [ ] Tema oceânico
-- [ ] Layout científico
-- [ ] Responsividade
-- [ ] UX focada em análise
+- [x] Tema oceânico (CSS variables: --bg-base #0a0e1a, --accent #06b6d4)
+- [x] Layout científico (sidebar, charts-grid, KPI cards)
+- [x] Responsividade (Tailwind + CSS Grid)
+- [x] UX focada em análise (tabs Analytics, filtros globais, export)
 
 ---
 
 # 🚀 FASE FINAL — Produto
 
-- [ ] Build Electron
-- [ ] Empacotamento
-- [ ] Documentação
-- [ ] Deploy interno
+- [x] Build Electron (`app/main.js` + electron-builder)
+- [x] Empacotamento (AppImage/deb/dmg/nsis via `npm run dist:linux`)
+- [x] Documentação (README.md com stack, quickstart, páginas, ETL, testes)
+- [x] Deploy via Docker Compose (frontend :8080, API :3001, Analytics :8000, Portainer :9000)
 
 ---
 
 # 💡 Extras (Diferenciais)
 
 - [ ] Suporte offline (cache local)
-- [ ] Exportação de relatórios
-- [ ] Upload de datasets personalizados
+- [x] Exportação de relatórios (CSV + JSON — espécies, observações, stats)
+- [x] Upload de datasets personalizados (multer CSV upload)
 - [ ] Plugins de análise
 
 ---
 
-# 🧭 Próximo passo
+# 📋 Pendências prioritárias
 
-Começar por:
-1. Setup monorepo
-2. Electron + React
-3. API básica
-4. Primeiro mapa renderizando dados mockados
+- [x] Heatmap real com `leaflet.heat` integrado no MapPage + painel de legenda flutuante
+- [ ] PostgreSQL substituindo in-memory (persistência real)
+- [ ] Redis cache (performance em produção)
+- [x] Correlação no Dashboard — ScatterChart Espécies × Observações por Bioma
+- [x] Probabilidade/tendência nos tooltips do mapa — P(espécie|região) Bayesiano
+- [x] Clusterização visual no mapa — view Clusters com círculos proporcionais

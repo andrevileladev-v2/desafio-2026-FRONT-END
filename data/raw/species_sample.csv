@@ -1,0 +1,6 @@
+id,name,scientificName,category,status,description,biome
+s_ext1,Tamanduá-mirim,Tamandua tetradactyla,Mammal,Least Concern,Tamanduá de menor porte encontrado em florestas e savanas,Cerrado
+s_ext2,Paca,Cuniculus paca,Mammal,Least Concern,Roedor noturno de grande porte muito caçado para alimentação,Amazônia
+s_ext3,Caititu,Pecari tajacu,Mammal,Least Concern,Porco-do-mato amplamente distribuído nas Américas,Cerrado
+s_ext4,Suçuarana,Puma concolor,Mammal,Least Concern,Segundo maior felino das Américas com ampla distribuição,Mata Atlântica
+s_ext5,Queixada,Tayassu pecari,Mammal,Near Threatened,Porco selvagem que vive em bandos numerosos,Amazônia

@@ -132,3 +132,51 @@ Implementar visualizações adicionais como:
 ## 👤 Em caso de dúvidas entre em contato com:
 * Theodor: 55 53 991469520 (Whatsapp)
 * Email: siapesq@gmail.com
+
+---
+
+## 🚀 EcoAnalysis Platform — Implementação
+
+### Stack
+| Camada | Tecnologia |
+|---|---|
+| Frontend | React 19 + Vite + TypeScript + Tailwind (tema oceânico) |
+| Backend | Node.js + Express 5 + TypeScript |
+| Analytics | Python 3.12 + FastAPI + scikit-learn + statsmodels |
+| Desktop | Electron 41 + electron-builder |
+| Infra | Docker Compose + Portainer |
+| Testes | Jest (43) + Vitest (10) + Playwright E2E |
+
+### Início rápido
+```bash
+# Web
+npm install && npm run dev          # http://localhost:5173
+
+# Desktop
+npm run dev:electron
+
+# Python ML
+cd services/analytics && pip install -r requirements.txt
+python3 -m uvicorn main:app --port 8000
+
+# Docker (produção)
+docker compose up --build
+# Frontend: :8080 | API: :3001 | Analytics: :8000 | Portainer: :9000
+```
+
+### Páginas
+- **Dashboard** — KPIs + 5 gráficos Recharts, filtro por bioma, export CSV/JSON
+- **Mapa** — Leaflet + CartoDB dark, toggle status/bioma, timeline por ano, heatmap
+- **Espécies** — CRUD completo, busca/filtros, upload CSV, export
+- **Analytics** — 6 abas: Bayesiano, ARIMA, K-Means, PCA, Isolation Forest, Árvore de Decisão
+
+### ETL Pipeline
+```
+data/raw/*.csv → limpeza → normalização → feature engineering → data/processed/
+```
+
+### Testes
+```bash
+npm test                       # todos os testes
+cd frontend && npx playwright test  # E2E
+```

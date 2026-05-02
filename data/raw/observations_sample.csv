@@ -1,0 +1,9 @@
+id,speciesId,speciesName,lat,lng,date,region,biome,notes
+obs_e1,s_ext1,Tamanduá-mirim,-15.3,-47.8,2023-02-10,Cerrado Central,Cerrado,Avistamento em campo aberto
+obs_e2,s_ext1,Tamanduá-mirim,-16.1,-48.2,2023-05-22,Cerrado Central,Cerrado,Câmera trap
+obs_e3,s_ext2,Paca,-3.5,-60.1,2023-01-15,Amazônia Ocidental,Amazônia,Observação noturna
+obs_e4,s_ext2,Paca,-4.2,-61.3,2023-07-08,Amazônia Ocidental,Amazônia,Câmera trap
+obs_e5,s_ext3,Caititu,-13.2,-46.5,2023-03-19,Cerrado Central,Cerrado,Bando de 12 indivíduos
+obs_e6,s_ext4,Suçuarana,-22.5,-43.2,2023-09-01,Mata Atlântica Sul,Mata Atlântica,Avistamento por pesquisador
+obs_e7,s_ext5,Queixada,-2.8,-58.9,2023-11-12,Amazônia Ocidental,Amazônia,Bando de 40 indivíduos
+obs_e8,s_ext5,Queixada,-5.1,-62.0,2024-01-03,Amazônia Ocidental,Amazônia,Câmera trap

@@ -48,6 +48,19 @@ export class StatsService {
       }, {}),
     ).map(([biome, count]) => ({ biome, count }))
 
+    const biomeSpeciesMap: Record<string, Set<string>> = {}
+    const biomeObsMap: Record<string, number> = {}
+    for (const o of allObs) {
+      if (!biomeSpeciesMap[o.biome]) biomeSpeciesMap[o.biome] = new Set()
+      biomeSpeciesMap[o.biome]!.add(o.speciesName)
+      biomeObsMap[o.biome] = (biomeObsMap[o.biome] ?? 0) + 1
+    }
+    const biomeCorrelation = Object.entries(biomeSpeciesMap).map(([biome, species]) => ({
+      biome,
+      speciesCount: species.size,
+      obsCount: biomeObsMap[biome] ?? 0,
+    }))
+
     return {
       totalSpecies: allSpecies.length,
       totalObservations: allObs.length,
@@ -56,6 +69,7 @@ export class StatsService {
       topSpecies,
       byRegion,
       byBiome,
+      biomeCorrelation,
     }
   }
 
