@@ -64,8 +64,9 @@ backend/build/
 # =========================
 
 services/analytics/venv/
-services/analytics/**pycache**/
-services/analytics/*.pyc
+services/analytics/.venv/
+services/analytics/**/__pycache__/
+services/analytics/**/*.pyc
 services/analytics/.pytest_cache/
 
 # Python general

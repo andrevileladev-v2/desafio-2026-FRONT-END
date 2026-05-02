@@ -126,7 +126,8 @@ export function DashboardPage() {
                 cy="50%"
                 outerRadius={80}
                 label={({ value }: { value?: number | string }) => `${value ?? ''}`}
-              >
+
+>
                 {stats.byStatus.map((entry, i) => (
                   <Cell
                     key={entry.status}
