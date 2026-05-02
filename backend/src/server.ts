@@ -7,6 +7,7 @@ import { StatsService } from './services/StatsService'
 import { speciesRouter } from './routes/species'
 import { observationsRouter } from './routes/observations'
 import { analyticsRouter } from './routes/analytics'
+import { mlRouter } from './routes/ml'
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
@@ -21,6 +22,7 @@ const statsService = new StatsService(speciesRepo, obsRepo)
 app.use('/api/species', speciesRouter(speciesRepo, obsRepo))
 app.use('/api/observations', observationsRouter(obsRepo))
 app.use('/api', analyticsRouter(statsService))
+app.use('/api', mlRouter(obsRepo))
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

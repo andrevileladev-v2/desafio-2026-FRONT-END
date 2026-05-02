@@ -8,11 +8,27 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - PYTHON_ANALYTICS_URL=http://analytics:8000
+    depends_on:
+      analytics:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
+
+  analytics:
+    build:
+      context: ./services/analytics
+    container_name: ecoanalysis-analytics
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
