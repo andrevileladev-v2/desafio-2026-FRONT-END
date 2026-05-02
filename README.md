@@ -165,8 +165,8 @@ docker compose up --build
 ```
 
 ### Páginas
-- **Dashboard** — KPIs + 5 gráficos Recharts, filtro por bioma, export CSV/JSON
-- **Mapa** — Leaflet + CartoDB dark, toggle status/bioma, timeline por ano, heatmap
+- **Dashboard** — KPIs + 6 gráficos Recharts (linha, pizza, barras, scatter correlação), filtro global por bioma, export CSV/JSON
+- **Mapa** — Leaflet + CartoDB dark, 3 modos: Pontos (status/bioma) / Mapa de Calor (leaflet.heat) / Clusters, tooltip com P(espécie|região), timeline por ano, legenda flutuante
 - **Espécies** — CRUD completo, busca/filtros, upload CSV, export
 - **Analytics** — 6 abas: Bayesiano, ARIMA, K-Means, PCA, Isolation Forest, Árvore de Decisão
 
@@ -177,6 +177,39 @@ data/raw/*.csv → limpeza → normalização → feature engineering → data/p
 
 ### Testes
 ```bash
-npm test                       # todos os testes
-cd frontend && npx playwright test  # E2E
+npm test                            # 43 backend + 10 frontend
+cd frontend && npx playwright test  # E2E (requer servidor rodando)
+```
+
+### Deploy
+
+#### Frontend — Vercel (recomendado)
+```bash
+# 1. Faça push para o GitHub
+# 2. Importe o repo no vercel.com
+# 3. Adicione a env var: VITE_API_URL=<url-do-backend>
+# O vercel.json já está configurado
+```
+
+#### Frontend — Netlify
+```bash
+# 1. Faça push para o GitHub
+# 2. Importe o repo no netlify.com
+# 3. Adicione a env var: VITE_API_URL=<url-do-backend>
+# O netlify.toml já está configurado
+```
+
+#### Backend — Render (free tier)
+```bash
+# 1. New Web Service → conecte o repo
+# 2. Root Directory: backend
+# 3. Build Command: npm install && npm run build
+# 4. Start Command: npm start
+# 5. Env: PORT=3001
+```
+
+#### Tudo via Docker
+```bash
+docker compose up --build
+# Frontend: :8080 | API: :3001 | Analytics: :8000 | Portainer: :9000
 ```
