@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: '◈' },
+  { path: '/dashboard', label: 'Dashboard', icon: '◈' },
   { path: '/map', label: 'Mapa', icon: '⬡' },
   { path: '/species', label: 'Espécies', icon: '◉' },
   { path: '/analytics', label: 'Analytics', icon: '◆' },
@@ -40,8 +40,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="main-content">
-        <div className="page-container">{children}</div>
+      <main className={`main-content${pathname === '/map' ? ' map-active' : ''}`}>
+        {pathname === '/map' ? children : <div className="page-container">{children}</div>}
       </main>
     </div>
   )

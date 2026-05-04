@@ -6,6 +6,9 @@ import { analyticsApi } from '../../shared/api/analytics'
 import { speciesApi } from '../../shared/api/species'
 import type { Species } from '../../shared/types'
 import { HeatLayer } from './HeatLayer'
+import { SatelliteLayer, SATELLITE_LABELS, SATELLITE_GROUPS } from './SatelliteLayer'
+import type { SatelliteProduct } from './SatelliteLayer'
+import { WindyEmbed } from './WindyEmbed'
 
 const STATUS_COLOR: Record<string, string> = {
   'Least Concern': '#10b981',
@@ -23,6 +26,14 @@ const BIOME_COLOR: Record<string, string> = {
   Caatinga: '#ef4444',
 }
 
+const BIOME_VIEW: Record<string, { center: [number, number]; zoom: number }> = {
+  Amazônia:       { center: [-5,  -60], zoom: 5 },
+  Cerrado:        { center: [-15, -47], zoom: 5 },
+  Pantanal:       { center: [-19, -57], zoom: 6 },
+  'Mata Atlântica': { center: [-22, -44], zoom: 6 },
+  Caatinga:       { center: [-9,  -38], zoom: 6 },
+}
+
 const HEAT_LEGEND = [
   { color: '#0c4a6e', label: 'Muito baixo' },
   { color: '#06b6d4', label: 'Baixo' },
@@ -33,18 +44,48 @@ const HEAT_LEGEND = [
 ]
 
 type ColorMode = 'status' | 'biome'
-type ViewMode = 'points' | 'heatmap' | 'clusters'
+type ViewMode = 'points' | 'heatmap' | 'clusters' | 'windy'
+type WindyLayer = 'waves' | 'wind' | 'temp' | 'currents' | 'swell1'
 
-function FitBounds({ points }: { points: HeatmapPoint[] }) {
+const VIEW_LABELS: Record<ViewMode, string> = {
+  points:   '● Pontos',
+  heatmap:  '⊕ Calor',
+  clusters: '◎ Clusters',
+  windy:    '🌊 Ondas',
+}
+
+const WINDY_LABELS: Record<WindyLayer, string> = {
+  waves:    'Ondas',
+  swell1:   'Swell',
+  wind:     'Vento',
+  currents: 'Correntes',
+  temp:     'Temperatura',
+}
+
+function MapZoomController({ biome }: { biome: string }) {
   const map = useMap()
-  const fitted = useRef(false)
+  const prev = useRef('')
   useEffect(() => {
-    if (!fitted.current && points.length > 0) {
-      map.setView([-14, -55], 4)
-      fitted.current = true
+    if (biome === prev.current) return
+    prev.current = biome
+    if (biome && BIOME_VIEW[biome]) {
+      const { center, zoom } = BIOME_VIEW[biome]
+      map.flyTo(center, zoom, { duration: 1.2 })
+    } else if (!biome) {
+      map.flyTo([-14, -55], 4, { duration: 1.2 })
     }
-  }, [map, points])
+  }, [map, biome])
   return null
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function defaultSatelliteDate() {
+  const d = new Date()
+  d.setDate(d.getDate() - 3)
+  return d.toISOString().slice(0, 10)
 }
 
 export function MapPage() {
@@ -53,13 +94,18 @@ export function MapPage() {
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [bayesian, setBayesian] = useState<BayesianResult[]>([])
   const [speciesList, setSpeciesList] = useState<Species[]>([])
-  const [selectedSpecies, setSelectedSpecies] = useState<string>('')
-  const [selectedBiome, setSelectedBiome] = useState<string>('')
-  const [view, setView] = useState<ViewMode>('points')
+  const [selectedSpecies, setSelectedSpecies] = useState('')
+  const [selectedBiome, setSelectedBiome] = useState('')
+  const [view, setView] = useState<ViewMode>('windy')
   const [colorMode, setColorMode] = useState<ColorMode>('status')
   const [loading, setLoading] = useState(true)
   const [allYears, setAllYears] = useState<number[]>([])
-  const [yearFilter, setYearFilter] = useState<number>(0)
+  const [yearFilter, setYearFilter] = useState(0)
+
+  const [satelliteProduct, setSatelliteProduct] = useState<SatelliteProduct>('none')
+  const [satelliteDate, setSatelliteDate] = useState(defaultSatelliteDate())
+  const [satelliteOpacity, setSatelliteOpacity] = useState(0.75)
+  const [windyLayer, setWindyLayer] = useState<WindyLayer>('currents')
 
   useEffect(() => {
     Promise.all([
@@ -98,14 +144,28 @@ export function MapPage() {
     [observations],
   )
 
-  const filteredObs = useMemo(() => {
-    return observations.filter((o) => {
-      if (selectedSpecies && o.speciesId !== selectedSpecies) return false
-      if (selectedBiome && o.biome !== selectedBiome) return false
-      if (yearFilter && parseInt(o.date.slice(0, 4)) !== yearFilter) return false
-      return true
+  const selectedBiomeFromSpecies = useMemo(() => {
+    if (!selectedSpecies) return ''
+    return speciesList.find((s) => s.id === selectedSpecies)?.biome ?? ''
+  }, [selectedSpecies, speciesList])
+
+  const targetBiome = selectedBiomeFromSpecies || selectedBiome
+
+  const yearCounts = useMemo(() => {
+    const counts: Record<number, number> = {}
+    observations.forEach((o) => {
+      const y = parseInt(o.date.slice(0, 4))
+      counts[y] = (counts[y] || 0) + 1
     })
-  }, [observations, selectedSpecies, selectedBiome, yearFilter])
+    return counts
+  }, [observations])
+
+  const filteredObs = useMemo(() => observations.filter((o) => {
+    if (selectedSpecies && o.speciesId !== selectedSpecies) return false
+    if (selectedBiome && o.biome !== selectedBiome) return false
+    if (yearFilter && parseInt(o.date.slice(0, 4)) !== yearFilter) return false
+    return true
+  }), [observations, selectedSpecies, selectedBiome, yearFilter])
 
   const heatPoints = useMemo(() => {
     const filtered = heatmap.filter((h) => {
@@ -146,113 +206,244 @@ export function MapPage() {
     ? Object.entries(STATUS_COLOR)
     : Object.entries(BIOME_COLOR)
 
+  const visibleCount = view === 'points'
+    ? filteredObs.length
+    : view === 'clusters'
+    ? clusters.length
+    : heatPoints.length
+
   return (
-    <div className="map-page">
-      <div className="page-header">
-        <h1>Mapa Geoespacial</h1>
-        <p className="page-subtitle">Distribuição geográfica das espécies monitoradas</p>
-      </div>
-
-      <div className="map-controls">
-        <select
-          className="map-select"
-          value={selectedSpecies}
-          onChange={(e) => setSelectedSpecies(e.target.value)}
-        >
-          <option value="">Todas as espécies</option>
-          {speciesList.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-
-        <select
-          className="map-select"
-          value={selectedBiome}
-          onChange={(e) => setSelectedBiome(e.target.value)}
-        >
-          <option value="">Todos os biomas</option>
-          {biomes.map((b) => <option key={b} value={b}>{b}</option>)}
-        </select>
-
-        <div className="view-toggle">
-          <button className={view === 'points' ? 'active' : ''} onClick={() => setView('points')}>
-            Pontos
-          </button>
-          <button className={view === 'heatmap' ? 'active' : ''} onClick={() => setView('heatmap')}>
-            Mapa de Calor
-          </button>
-          <button className={view === 'clusters' ? 'active' : ''} onClick={() => setView('clusters')}>
-            Clusters
-          </button>
+    <div className="map-full">
+      {/* ── Left control panel ─────────────────────────────────── */}
+      <div className="mp">
+        {/* Brand */}
+        <div className="mp-brand">
+          <div className="mp-brand-icon">⬡</div>
+          <div>
+            <div className="mp-brand-title">EcoAnalysis</div>
+            <div className="mp-brand-sub">Platform 2026</div>
+          </div>
         </div>
 
+        {/* Species filter */}
+        <div className="mp-section">
+          <div className="mp-label">ESPÉCIE</div>
+          <select
+            className="mp-select"
+            value={selectedSpecies}
+            onChange={(e) => setSelectedSpecies(e.target.value)}
+          >
+            <option value="">Todas as espécies</option>
+            {speciesList.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Biome filter */}
+        <div className="mp-section">
+          <div className="mp-label">BIOMA</div>
+          <select
+            className="mp-select"
+            value={selectedBiome}
+            onChange={(e) => setSelectedBiome(e.target.value)}
+          >
+            <option value="">Todos os biomas</option>
+            {biomes.map((b) => (
+              <option key={b} value={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* View mode */}
+        <div className="mp-section">
+          <div className="mp-label">VISUALIZAÇÃO</div>
+          <div className="mp-view-grid">
+            {(['points', 'heatmap', 'clusters', 'windy'] as ViewMode[]).map((v) => (
+              <button
+                key={v}
+                className={`mp-view-btn${view === v ? ' active' : ''}`}
+                onClick={() => setView(v)}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Color mode — only for points */}
         {view === 'points' && (
-          <div className="view-toggle">
-            <button
-              className={colorMode === 'status' ? 'active' : ''}
-              onClick={() => setColorMode('status')}
-            >
-              Status
-            </button>
-            <button
-              className={colorMode === 'biome' ? 'active' : ''}
-              onClick={() => setColorMode('biome')}
-            >
-              Bioma
-            </button>
+          <div className="mp-section">
+            <div className="mp-label">COR POR</div>
+            <div className="mp-toggle">
+              <button
+                className={colorMode === 'status' ? 'active' : ''}
+                onClick={() => setColorMode('status')}
+              >
+                Status
+              </button>
+              <button
+                className={colorMode === 'biome' ? 'active' : ''}
+                onClick={() => setColorMode('biome')}
+              >
+                Bioma
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="map-stats">
-          {view === 'points' ? filteredObs.length : view === 'clusters' ? clusters.length : heatPoints.length} registros
+        {/* Satellite controls */}
+        {view !== 'windy' && (
+          <div className="mp-section">
+            <div className="mp-label">🛰 SATÉLITE</div>
+            <select
+              className="mp-select"
+              value={satelliteProduct}
+              onChange={(e) => setSatelliteProduct(e.target.value as SatelliteProduct)}
+            >
+              <option value="none">Nenhuma</option>
+              {Object.entries(SATELLITE_GROUPS).map(([group, products]) => (
+                <optgroup key={group} label={group}>
+                  {products.map((p) => (
+                    <option key={p} value={p}>{SATELLITE_LABELS[p]}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            {satelliteProduct !== 'none' && (
+              <>
+                <input
+                  type="date"
+                  className="mp-select"
+                  style={{ marginTop: 6 }}
+                  value={satelliteDate}
+                  max={todayISO()}
+                  onChange={(e) => setSatelliteDate(e.target.value)}
+                />
+                <div className="mp-opacity">
+                  <span>Opac.</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={100}
+                    value={Math.round(satelliteOpacity * 100)}
+                    onChange={(e) => setSatelliteOpacity(parseInt(e.target.value) / 100)}
+                  />
+                  <span>{Math.round(satelliteOpacity * 100)}%</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Windy layer selector */}
+        {view === 'windy' && (
+          <div className="mp-section">
+            <div className="mp-label">🌊 CAMADA OCEÂNICA</div>
+            <div className="mp-windy-list">
+              {(['waves', 'swell1', 'wind', 'currents', 'temp'] as WindyLayer[]).map((l) => (
+                <button
+                  key={l}
+                  className={`mp-windy-btn${windyLayer === l ? ' active' : ''}`}
+                  onClick={() => setWindyLayer(l)}
+                >
+                  {WINDY_LABELS[l]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Legend */}
+        <div className="mp-section mp-legend-section">
+          <div className="mp-label">LEGENDA</div>
+          {view === 'heatmap' ? (
+            <>
+              <div className="mp-heat-bar" />
+              {HEAT_LEGEND.map(({ color, label }) => (
+                <div key={label} className="mp-legend-item">
+                  <span className="mp-legend-dot" style={{ background: color }} />
+                  <span>{label}</span>
+                </div>
+              ))}
+            </>
+          ) : view === 'clusters' ? (
+            <div className="mp-legend-item">
+              <span className="mp-legend-dot" style={{ background: '#06b6d4' }} />
+              <span>Área de densidade</span>
+            </div>
+          ) : view === 'points' ? (
+            legendEntries.map(([label, color]) => (
+              <div key={label} className="mp-legend-item">
+                <span className="mp-legend-dot" style={{ background: color }} />
+                <span>{label}</span>
+              </div>
+            ))
+          ) : null}
+          {satelliteProduct !== 'none' && view !== 'windy' && (
+            <div className="mp-satellite-badge">
+              🛰 {SATELLITE_LABELS[satelliteProduct]}
+            </div>
+          )}
+        </div>
+
+        {/* Stats footer */}
+        <div className="mp-footer">
+          <span className="mp-stat-value">{visibleCount}</span>
+          <span className="mp-stat-label"> registros</span>
         </div>
       </div>
 
-      {allYears.length > 0 && view !== 'clusters' && (
-        <div className="map-timeline">
-          <span>Ano:</span>
-          <input
-            type="range"
-            className="timeline-range"
-            min={0}
-            max={allYears.length}
-            value={allYears.indexOf(yearFilter) + (yearFilter === 0 ? -1 : 0) + 1}
-            onChange={(e) => {
-              const idx = parseInt(e.target.value)
-              setYearFilter(idx === 0 ? 0 : (allYears[idx - 1] ?? 0))
-            }}
-          />
-          <span className="timeline-label">{yearFilter === 0 ? 'Todos' : yearFilter}</span>
-        </div>
-      )}
-
-      <div className="map-wrap">
+      {/* ── Map area ───────────────────────────────────────────── */}
+      <div className="map-area">
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
+        ) : view === 'windy' ? (
+          <WindyEmbed layer={windyLayer} lat={-14} lng={-38} zoom={5} />
         ) : (
           <>
             <MapContainer
               center={[-14, -55]}
               zoom={4}
-              style={{ height: '100%', width: '100%', borderRadius: 12 }}
+              style={{ height: '100%', width: '100%' }}
             >
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              {satelliteProduct !== 'none' ? (
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution="Tiles &copy; Esri"
+                  opacity={0.4}
+                />
+              ) : (
+                <TileLayer
+                  url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  attribution='&copy; OpenStreetMap &copy; CARTO'
+                />
+              )}
+
+              <SatelliteLayer
+                product={satelliteProduct}
+                date={satelliteDate}
+                opacity={satelliteOpacity}
               />
-              <FitBounds points={heatmap} />
+
+              <MapZoomController biome={targetBiome} />
 
               {view === 'points' && filteredObs.map((obs) => {
                 const prob = getBayesianProb(obs.speciesName, obs.region)
+                const year = parseInt(obs.date.slice(0, 4))
+                const isCurrentYear = yearFilter !== 0 && year === yearFilter
                 return (
                   <CircleMarker
                     key={obs.id}
                     center={[obs.lat, obs.lng]}
-                    radius={6}
+                    radius={isCurrentYear ? 8 : 6}
                     pathOptions={{
                       fillColor: getColor(obs.speciesName),
-                      color: getColor(obs.speciesName),
-                      weight: 1,
+                      color: isCurrentYear ? '#fff' : getColor(obs.speciesName),
+                      weight: isCurrentYear ? 1.5 : 1,
                       opacity: 0.9,
                       fillOpacity: 0.8,
                     }}
@@ -274,80 +465,63 @@ export function MapPage() {
                 )
               })}
 
-              {view === 'heatmap' && (
-                <HeatLayer points={heatPoints} radius={35} blur={25} />
-              )}
+              {view === 'heatmap' && <HeatLayer points={heatPoints} radius={35} blur={25} />}
 
-              {view === 'clusters' && clusters.map((cl) => {
-                const radius = 30000 + (cl.count / maxClusterCount) * 120000
-                return (
-                  <Circle
-                    key={cl.id}
-                    center={[cl.lat, cl.lng]}
-                    radius={radius}
-                    pathOptions={{
-                      fillColor: '#06b6d4',
-                      color: '#06b6d4',
-                      weight: 1.5,
-                      fillOpacity: 0.15,
-                      opacity: 0.6,
-                    }}
-                  >
-                    <Popup className="map-popup">
-                      <div className="popup-content">
-                        <strong>Cluster — {cl.count} obs.</strong>
-                        <div style={{ marginTop: 4, fontSize: 11 }}>
-                          {cl.species.slice(0, 5).map((s) => (
-                            <div key={s}>· {s}</div>
-                          ))}
-                          {cl.species.length > 5 && (
-                            <div style={{ color: '#64748b' }}>+{cl.species.length - 5} espécies</div>
-                          )}
-                        </div>
+              {view === 'clusters' && clusters.map((cl) => (
+                <Circle
+                  key={cl.id}
+                  center={[cl.lat, cl.lng]}
+                  radius={30000 + (cl.count / maxClusterCount) * 120000}
+                  pathOptions={{
+                    fillColor: '#06b6d4',
+                    color: '#06b6d4',
+                    weight: 1.5,
+                    fillOpacity: 0.15,
+                    opacity: 0.6,
+                  }}
+                >
+                  <Popup className="map-popup">
+                    <div className="popup-content">
+                      <strong>Cluster — {cl.count} obs.</strong>
+                      <div style={{ marginTop: 4, fontSize: 11 }}>
+                        {cl.species.slice(0, 5).map((s) => <div key={s}>· {s}</div>)}
+                        {cl.species.length > 5 && (
+                          <div style={{ color: '#64748b' }}>
+                            +{cl.species.length - 5} espécies
+                          </div>
+                        )}
                       </div>
-                    </Popup>
-                  </Circle>
-                )
-              })}
+                    </div>
+                  </Popup>
+                </Circle>
+              ))}
             </MapContainer>
 
-            <div className="map-legend-float">
-              <div className="legend-title">
-                {view === 'heatmap'
-                  ? 'Intensidade'
-                  : view === 'clusters'
-                  ? 'Clusters'
-                  : colorMode === 'status' ? 'Status' : 'Bioma'}
-              </div>
-              {view === 'heatmap' ? (
-                <>
-                  <div className="heat-gradient-bar" />
-                  {HEAT_LEGEND.map(({ color, label }) => (
-                    <div key={label} className="legend-item">
-                      <span className="legend-dot" style={{ background: color }} />
-                      <span>{label}</span>
-                    </div>
+            {/* Year timeline — floating bottom bar */}
+            {allYears.length > 0 && view !== 'clusters' && (
+              <div className="map-year-bar">
+                <span className="year-bar-label">ANO</span>
+                <div className="year-bar-items">
+                  <button
+                    className={`year-btn${yearFilter === 0 ? ' active' : ''}`}
+                    onClick={() => setYearFilter(0)}
+                  >
+                    <span>Todos</span>
+                    <span className="year-count">{observations.length}</span>
+                  </button>
+                  {allYears.map((year) => (
+                    <button
+                      key={year}
+                      className={`year-btn${yearFilter === year ? ' active' : ''}`}
+                      onClick={() => setYearFilter(year)}
+                    >
+                      <span>{year}</span>
+                      <span className="year-count">{yearCounts[year] ?? 0}</span>
+                    </button>
                   ))}
-                </>
-              ) : view === 'clusters' ? (
-                <>
-                  <div className="legend-item">
-                    <span className="legend-dot" style={{ background: '#06b6d4' }} />
-                    <span>Área de densidade</span>
-                  </div>
-                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>
-                    Raio proporcional ao nº de observações
-                  </div>
-                </>
-              ) : (
-                legendEntries.map(([label, color]) => (
-                  <div key={label} className="legend-item">
-                    <span className="legend-dot" style={{ background: color }} />
-                    <span>{label}</span>
-                  </div>
-                ))
-              )}
-            </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

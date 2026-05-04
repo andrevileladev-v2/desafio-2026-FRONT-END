@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './shared/components/Layout'
 import { FilterProvider } from './shared/context/FilterContext'
 
@@ -23,7 +23,8 @@ export default function App() {
         <Layout>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<Navigate to="/map" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/map" element={<MapPage />} />
               <Route path="/species" element={<SpeciesPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
