@@ -1,4 +1,10 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
+import {
+  SlidersHorizontal, X,
+  MapPin, Flame, Layers, Waves,
+  Wind, Droplets, Thermometer, Satellite,
+} from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { HeatmapPoint, Observation, Cluster, BayesianResult } from '../../shared/types'
@@ -27,11 +33,11 @@ const BIOME_COLOR: Record<string, string> = {
 }
 
 const BIOME_VIEW: Record<string, { center: [number, number]; zoom: number }> = {
-  Amazônia:       { center: [-5,  -60], zoom: 5 },
-  Cerrado:        { center: [-15, -47], zoom: 5 },
-  Pantanal:       { center: [-19, -57], zoom: 6 },
+  Amazônia: { center: [-5, -60], zoom: 5 },
+  Cerrado: { center: [-15, -47], zoom: 5 },
+  Pantanal: { center: [-19, -57], zoom: 6 },
   'Mata Atlântica': { center: [-22, -44], zoom: 6 },
-  Caatinga:       { center: [-9,  -38], zoom: 6 },
+  Caatinga: { center: [-9, -38], zoom: 6 },
 }
 
 const HEAT_LEGEND = [
@@ -47,19 +53,21 @@ type ColorMode = 'status' | 'biome'
 type ViewMode = 'points' | 'heatmap' | 'clusters' | 'windy'
 type WindyLayer = 'waves' | 'wind' | 'temp' | 'currents' | 'swell1'
 
-const VIEW_LABELS: Record<ViewMode, string> = {
-  points:   '● Pontos',
-  heatmap:  '⊕ Calor',
-  clusters: '◎ Clusters',
-  windy:    '🌊 Ondas',
+type IconComponent = React.ComponentType<LucideProps>
+
+const VIEW_CONFIG: Record<ViewMode, { label: string; Icon: IconComponent }> = {
+  points: { label: 'Pontos', Icon: MapPin },
+  heatmap: { label: 'Calor', Icon: Flame },
+  clusters: { label: 'Clusters', Icon: Layers },
+  windy: { label: 'Ondas', Icon: Waves },
 }
 
-const WINDY_LABELS: Record<WindyLayer, string> = {
-  waves:    'Ondas',
-  swell1:   'Swell',
-  wind:     'Vento',
-  currents: 'Correntes',
-  temp:     'Temperatura',
+const WINDY_CONFIG: Record<WindyLayer, { label: string; Icon: IconComponent }> = {
+  waves: { label: 'Ondas', Icon: Waves },
+  swell1: { label: 'Swell', Icon: Waves },
+  wind: { label: 'Vento', Icon: Wind },
+  currents: { label: 'Correntes', Icon: Droplets },
+  temp: { label: 'Temperatura', Icon: Thermometer },
 }
 
 function MapZoomController({ biome }: { biome: string }) {
@@ -101,6 +109,7 @@ export function MapPage() {
   const [loading, setLoading] = useState(true)
   const [allYears, setAllYears] = useState<number[]>([])
   const [yearFilter, setYearFilter] = useState(0)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const [satelliteProduct, setSatelliteProduct] = useState<SatelliteProduct>('none')
   const [satelliteDate, setSatelliteDate] = useState(defaultSatelliteDate())
@@ -209,21 +218,18 @@ export function MapPage() {
   const visibleCount = view === 'points'
     ? filteredObs.length
     : view === 'clusters'
-    ? clusters.length
-    : heatPoints.length
+      ? clusters.length
+      : heatPoints.length
 
   return (
     <div className="map-full">
+      {/* Mobile overlay — closes panel on tap outside */}
+      {panelOpen && (
+        <div className="mp-overlay" onClick={() => setPanelOpen(false)} />
+      )}
+
       {/* ── Left control panel ─────────────────────────────────── */}
-      <div className="mp">
-        {/* Brand */}
-        <div className="mp-brand">
-          <div className="mp-brand-icon">⬡</div>
-          <div>
-            <div className="mp-brand-title">EcoAnalysis</div>
-            <div className="mp-brand-sub">Platform 2026</div>
-          </div>
-        </div>
+      <div className={`mp${panelOpen ? ' open' : ''}`}>
 
         {/* Species filter */}
         <div className="mp-section">
@@ -259,15 +265,19 @@ export function MapPage() {
         <div className="mp-section">
           <div className="mp-label">VISUALIZAÇÃO</div>
           <div className="mp-view-grid">
-            {(['points', 'heatmap', 'clusters', 'windy'] as ViewMode[]).map((v) => (
-              <button
-                key={v}
-                className={`mp-view-btn${view === v ? ' active' : ''}`}
-                onClick={() => setView(v)}
-              >
-                {VIEW_LABELS[v]}
-              </button>
-            ))}
+            {(['points', 'heatmap', 'clusters', 'windy'] as ViewMode[]).map((v) => {
+              const { label, Icon } = VIEW_CONFIG[v]
+              return (
+                <button
+                  key={v}
+                  className={`mp-view-btn${view === v ? ' active' : ''}`}
+                  onClick={() => setView(v)}
+                >
+                  <Icon size={13} strokeWidth={1.8} />
+                  {label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -295,7 +305,7 @@ export function MapPage() {
         {/* Satellite controls */}
         {view !== 'windy' && (
           <div className="mp-section">
-            <div className="mp-label">🛰 SATÉLITE</div>
+            <div className="mp-label"><Satellite size={10} strokeWidth={1.8} /> SATÉLITE</div>
             <select
               className="mp-select"
               value={satelliteProduct}
@@ -339,17 +349,21 @@ export function MapPage() {
         {/* Windy layer selector */}
         {view === 'windy' && (
           <div className="mp-section">
-            <div className="mp-label">🌊 CAMADA OCEÂNICA</div>
+            <div className="mp-label"><Waves size={10} strokeWidth={1.8} /> CAMADA OCEÂNICA</div>
             <div className="mp-windy-list">
-              {(['waves', 'swell1', 'wind', 'currents', 'temp'] as WindyLayer[]).map((l) => (
-                <button
-                  key={l}
-                  className={`mp-windy-btn${windyLayer === l ? ' active' : ''}`}
-                  onClick={() => setWindyLayer(l)}
-                >
-                  {WINDY_LABELS[l]}
-                </button>
-              ))}
+              {(['waves', 'swell1', 'wind', 'currents', 'temp'] as WindyLayer[]).map((l) => {
+                const { label, Icon } = WINDY_CONFIG[l]
+                return (
+                  <button
+                    key={l}
+                    className={`mp-windy-btn${windyLayer === l ? ' active' : ''}`}
+                    onClick={() => setWindyLayer(l)}
+                  >
+                    <Icon size={13} strokeWidth={1.8} />
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -385,7 +399,7 @@ export function MapPage() {
           ) : null}
           {satelliteProduct !== 'none' && view !== 'windy' && (
             <div className="mp-satellite-badge">
-              🛰 {SATELLITE_LABELS[satelliteProduct]}
+              <Satellite size={10} strokeWidth={1.8} /> {SATELLITE_LABELS[satelliteProduct]}
             </div>
           )}
         </div>
@@ -399,6 +413,16 @@ export function MapPage() {
 
       {/* ── Map area ───────────────────────────────────────────── */}
       <div className="map-area">
+        {/* Toggle button — only visible on mobile */}
+        <button
+          className="map-panel-toggle"
+          onClick={() => setPanelOpen((p) => !p)}
+          aria-label="Abrir/fechar painel"
+        >
+          {panelOpen ? <X size={14} /> : <SlidersHorizontal size={14} />}
+          {panelOpen ? 'Fechar' : 'Filtros'}
+        </button>
+
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
         ) : view === 'windy' ? (

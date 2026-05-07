@@ -1,4 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { Bird, Fish, PawPrint, Bug, Leaf, Shell } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
+
+const CATEGORY_ICON: Record<string, React.ComponentType<LucideProps>> = {
+  Bird: Bird,
+  Fish: Fish,
+  Mammal: PawPrint,
+  Reptile: Bug,
+  Amphibian: Leaf,
+  Invertebrate: Shell,
+}
 import { speciesApi } from '../../shared/api/species'
 import { api } from '../../shared/api/client'
 import type { Species, SpeciesCategory, ConservationStatus } from '../../shared/types'
@@ -157,7 +168,9 @@ export function SpeciesPage() {
                 onClick={() => setSelected(s)}
               >
                 <div className="species-card-header">
-                  <div className="species-icon">{s.category === 'Bird' ? '◉' : s.category === 'Fish' ? '◈' : '◆'}</div>
+                  <div className="species-icon">
+                    {(() => { const Icon = CATEGORY_ICON[s.category] ?? Leaf; return <Icon size={18} strokeWidth={1.8} /> })()}
+                  </div>
                   <StatusBadge status={s.status} />
                 </div>
                 <div className="species-name">{s.name}</div>

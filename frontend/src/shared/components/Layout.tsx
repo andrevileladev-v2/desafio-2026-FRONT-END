@@ -1,46 +1,57 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { LayoutDashboard, Map, Leaf, BarChart2, Menu, Wifi } from 'lucide-react'
 
-const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: '◈' },
-  { path: '/map', label: 'Mapa', icon: '⬡' },
-  { path: '/species', label: 'Espécies', icon: '◉' },
-  { path: '/analytics', label: 'Analytics', icon: '◆' },
+type NavItem = { path: string; label: string; Icon: React.ElementType }
+
+const NAV_ITEMS: NavItem[] = [
+  { path: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { path: '/map',       label: 'Mapa',       Icon: Map },
+  { path: '/species',   label: 'Espécies',   Icon: Leaf },
+  { path: '/analytics', label: 'Analytics',  Icon: BarChart2 },
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
+
+      <aside className={`sidebar${open ? ' open' : ''}`}>
         <div className="sidebar-brand">
-          <span className="brand-icon">⬡</span>
-          <div>
-            <div className="brand-title">EcoAnalysis</div>
-            <div className="brand-subtitle">Platform 2026</div>
-          </div>
+          <img src="/logo.svg" alt="EcoAnalysis" className="brand-logo" />
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.map(({ path, label, Icon }) => (
             <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${pathname === item.path ? 'active' : ''}`}
+              key={path}
+              to={path}
+              className={`nav-item ${pathname === path ? 'active' : ''}`}
+              onClick={() => setOpen(false)}
             >
-              <span className="nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="nav-icon"><Icon size={16} strokeWidth={1.8} /></span>
+              <span>{label}</span>
             </Link>
           ))}
         </nav>
 
         <div className="sidebar-footer">
-          <div className="status-dot" />
+          <Wifi size={13} color="var(--green)" />
           <span>API Conectada</span>
         </div>
       </aside>
 
       <main className={`main-content${pathname === '/map' ? ' map-active' : ''}`}>
+        <div className="mobile-header">
+          <button className="hamburger" onClick={() => setOpen(true)} aria-label="Abrir menu">
+            <Menu size={18} strokeWidth={1.8} />
+          </button>
+          <img src="/logo.svg" alt="EcoAnalysis" className="mobile-logo" />
+          <div className="mobile-header-spacer" />
+        </div>
         {pathname === '/map' ? children : <div className="page-container">{children}</div>}
       </main>
     </div>

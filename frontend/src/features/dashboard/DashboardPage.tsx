@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Leaf, MapPin, Globe2, AlertTriangle } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend,
@@ -87,28 +88,28 @@ export function DashboardPage() {
 
       <div className="kpi-grid">
         <div className="kpi-card">
-          <div className="kpi-icon kpi-blue">◉</div>
+          <div className="kpi-icon kpi-blue"><Leaf size={20} strokeWidth={1.8} /></div>
           <div>
             <div className="kpi-value">{stats.totalSpecies}</div>
             <div className="kpi-label">Espécies Monitoradas</div>
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon kpi-cyan">⬡</div>
+          <div className="kpi-icon kpi-cyan"><MapPin size={20} strokeWidth={1.8} /></div>
           <div>
             <div className="kpi-value">{stats.totalObservations}</div>
             <div className="kpi-label">Observações Registradas</div>
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon kpi-amber">◆</div>
+          <div className="kpi-icon kpi-amber"><Globe2 size={20} strokeWidth={1.8} /></div>
           <div>
             <div className="kpi-value">{stats.byBiome.length}</div>
             <div className="kpi-label">Biomas Cobertos</div>
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon kpi-red">▲</div>
+          <div className="kpi-icon kpi-red"><AlertTriangle size={20} strokeWidth={1.8} /></div>
           <div>
             <div className="kpi-value">
               {stats.byStatus.find((s) => s.status === 'Critically Endangered')?.count ?? 0}
